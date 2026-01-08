@@ -1,131 +1,165 @@
-## Project Overview
+# ETHUSDT Trading Strategy
 
-This notebook demonstrates how a rule-based trading strategy can be designed under realistic market assumptions, explicitly accounting for key characteristics of financial time-series such as non-IID behavior, volatility clustering, and regime shifts.
-
-Rather than maximizing in-sample performance, the strategy emphasizes robustness, interpretability, and economic intuition.
+The notebook implements and evaluates a full ETHUSDT trading strategy using 30-minute OHLCV data, covering the entire workflow from raw data loading and feature engineering to strategy design, backtesting, risk analysis, and robustness validation.
 
 ---
 
-## Data & Feature Engineering
+## Data and Features
 
-- Loads `ETHUSDT.csv` containing timestamped open, high, low, close, and volume data  
-- Sorts observations chronologically, checks data integrity, and computes descriptive statistics  
-- Transforms raw prices into more stationary representations (log returns and volatility-adjusted features)
+### Data Preparation
 
-### Feature Construction
+- Loads `ETHUSDT.csv` containing timestamp, open, high, low, close, and volume data  
+- Sorts the data chronologically to preserve time-ordering  
+- Checks for missing values and data consistency  
+- Computes basic descriptive statistics to understand price behavior and volatility characteristics  
 
-Features are constructed using TA-Lib and custom transformations to capture different market dimensions:
+### Feature Engineering
 
-- **Trend features**: SMA/EMA across multiple horizons, moving-average slopes, distance to long-term trend  
-- **Momentum features**: MACD, RSI (multiple windows), Stochastic Oscillator, Rate of Change, Momentum  
-- **Volatility features**: ATR, Bollinger Bands, rolling volatility measures  
-- **Volume features**: Volume moving averages, OBV, volume change ratios  
-- **Custom features**: Normalized distances to moving averages and Bollinger Bands  
+A wide range of technical and statistical features is constructed using TA-Lib and custom transformations, including:
 
-These features are designed to reflect trend persistence, momentum strength, volatility regimes, and market participation, rather than raw price levels.
+- **Trend indicators**:  
+  Simple and exponential moving averages (SMAs and EMAs) across multiple horizons to capture short-, medium-, and long-term trends  
+
+- **Momentum indicators**:  
+  MACD, multiple RSI windows, Stochastic Oscillator, Rate of Change (ROC), and momentum indicators to measure trend strength and continuation  
+
+- **Volatility indicators**:  
+  Bollinger Bands, Average True Range (ATR), rolling volatility, and return-based volatility measures  
+
+- **Volume-based indicators**:  
+  Volume moving averages and On-Balance Volume (OBV) to capture participation and confirmation effects  
+
+- **Custom features**:  
+  Normalized distances of price to moving averages and Bollinger Bands, as well as return-based and volatility-adjusted features  
+
+These features are designed to represent different dimensions of market behavior rather than raw price levels.
 
 ---
 
-## Strategy Design & Trading Logic
+## Strategy Logic
 
-The strategy is implemented as an `AdvancedETHStrategy` (Backtesting.py style) with configurable parameters for:
+### Strategy Structure
 
-- Moving-average horizons  
-- RSI thresholds  
+The trading logic is implemented as an `AdvancedETHStrategy` following the Backtesting.py framework.  
+The strategy is parameterized by:
+
+- Moving-average periods  
+- RSI threshold levels  
 - ATR-based stop-loss and take-profit multipliers  
 - Position sizing rules  
 
 ### Entry Logic (Long-Only)
 
-Positions are initiated only when multiple conditions jointly confirm a favorable regime:
+Long positions are initiated when a set of trend and momentum conditions jointly indicate a favorable regime:
 
-- Short-term trend exceeds long-term trend (fast SMA above slow SMA)  
-- Price trades above the long-term (200-period) moving average  
-- Momentum confirmation via RSI above a threshold  
+- Fast moving average above slow moving average  
+- Price trading above the long-term (200-period) moving average  
+- RSI above a predefined threshold  
 - MACD above its signal line  
 
-An optional mean-reversion entry is allowed when price touches Bollinger Band extremes within an established uptrend, capturing temporary pullbacks rather than counter-trend moves.
+In addition to trend-following entries, an optional mean-reversion variant is included.  
+This allows entries near Bollinger Band lower extremes **only when the broader trend remains bullish**, aiming to capture temporary pullbacks within an uptrend.
 
-### Exit Logic & Risk Management
+### Exit Logic and Risk Management
 
-Positions are exited when trend or momentum conditions deteriorate, including:
+Positions are exited based on a combination of momentum deterioration and trend reversal signals, including:
 
-- RSI overbought signals  
+- RSI entering overbought territory  
 - Moving-average or MACD reversals  
-- Bollinger Band exhaustion  
+- Price reaching Bollinger Band extremes  
 
-Risk is controlled through dynamic ATR-based stop-loss and take-profit levels, allowing exits to adapt to changing volatility conditions.
+Risk management is handled through dynamic ATR-based stop-loss and take-profit levels, allowing exits to adjust automatically to changing volatility regimes.
 
 ---
 
-## Backtesting & Performance Evaluation
+## Backtesting and Performance Evaluation
 
-Backtesting is conducted using Backtesting.py with the following assumptions:
+### Backtesting Setup
 
-- Initial capital: 10,000 USDT  
-- Transaction cost: 0.1% per trade  
-- Exclusive orders to prevent overlapping positions  
+- Backtests are conducted using the Backtesting.py framework  
+- Initial capital is set to 10,000 USDT  
+- Transaction cost is fixed at 0.1% per trade  
+- Exclusive orders are enforced to prevent overlapping positions  
 
-Reported performance metrics include:
+### Performance Metrics
 
-- Total and annualized return  
-- Buy-and-hold benchmark return  
+The following performance statistics are computed and reported:
+
+- Total return and annualized return  
+- Buy-and-hold return over the same period  
 - Sharpe ratio  
 - Maximum drawdown  
-- Win rate and profit factor  
-- Average trade return and trade duration  
+- Win rate  
+- Profit factor  
+- Average trade return  
+- Trade duration statistics  
 
-The strategy is explicitly evaluated against the following objectives:
+The strategy performance is evaluated against explicit targets:
 
 - Sharpe ratio greater than 0.3  
 - Annualized return greater than 15%  
-- Outperformance versus buy-and-hold over the same period  
+- Performance exceeding the buy-and-hold benchmark  
 
 ---
 
-## Visualization & Trade-Level Analysis
+## Visualization and Trade Analysis
 
-The notebook provides extensive visual diagnostics, including:
+### Visual Diagnostics
 
-- Price series with moving averages  
+The notebook produces a comprehensive set of visualizations, including:
+
+- Price charts with moving averages  
 - RSI, MACD, and volume indicators  
-- Equity curve and drawdown trajectory  
-- Trade return distributions and win/loss breakdowns  
+- Equity curve and drawdown series  
+- Trade return histograms  
 - Strategy versus buy-and-hold cumulative returns  
 - Monthly return heatmaps  
+- Win and loss distribution bar charts  
 
-An interactive HTML backtest chart is generated for detailed inspection.
+An interactive HTML backtest chart is also generated for detailed inspection of trades and equity evolution.
 
-Trade-level analysis includes:
+### Trade-Level Analysis
 
-- Win/loss counts and ratios  
-- Average and maximum gains and losses  
-- Expectancy per trade  
-- Examples of best and worst trades  
+Individual trades are analyzed in detail by:
+
+- Counting winning and losing trades  
+- Computing average and maximum wins and losses  
+- Calculating win–loss ratios and trade expectancy  
+- Displaying sample trades  
+- Highlighting the best and worst trades  
 
 ---
 
-## Robustness Checks & Risk Metrics
+## Robustness Checks and Risk Metrics
 
-To assess stability beyond a single backtest:
+### Parameter Optimization
 
-- Parameter optimization is performed over MA, RSI, and ATR hyperparameters using Sharpe ratio as the objective  
-- Walk-forward analysis is conducted with rolling train/test windows to evaluate performance consistency across time  
+- Performs parameter optimization over moving-average periods, RSI thresholds, and ATR multipliers  
+- Optimization objective is the Sharpe ratio  
+- Reports the best parameter combination and the corresponding optimized performance  
 
-Additional risk metrics include:
+### Walk-Forward Analysis
+
+- Conducts walk-forward analysis using multiple rolling train/test windows  
+- Collects Sharpe ratio, return, drawdown, win rate, and number of trades for each window  
+- Visualizes the evolution of these metrics over time  
+
+### Risk Metrics
+
+Additional risk measures are computed and analyzed, including:
 
 - Daily and annualized volatility  
-- Sortino and Calmar ratios  
-- Value-at-Risk (VaR) and Conditional VaR (CVaR)  
-- Rolling Sharpe and volatility  
+- Sortino ratio and Calmar ratio  
+- Value-at-Risk (VaR) and Conditional Value-at-Risk (CVaR)  
+- Rolling Sharpe ratio and rolling volatility  
 - Drawdown statistics and maximum consecutive losses  
 
-These analyses aim to distinguish structural trading edge from potential overfitting.
+These analyses are intended to assess strategy stability and distinguish structural performance from potential overfitting.
 
 ---
 
 ## Notes
 
-- The strategy is designed for research and educational purposes only  
-- Results are sensitive to market regime and transaction costs  
-- No claim is made regarding future performance
+- The strategy is developed for research and educational purposes  
+- Results are sensitive to market regimes and transaction cost assumptions  
+- No claims are made regarding future or real-world trading performance
